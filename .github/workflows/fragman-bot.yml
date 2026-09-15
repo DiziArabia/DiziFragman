@@ -1,0 +1,38 @@
+name: Dizi Fragman Bot
+
+on:
+  schedule:
+    # Fragmanlar are time-sensitive, so this checks more often than the
+    # general news bot. Every 10 minutes.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run fragman bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.FRAGMAN_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.FRAGMAN_CHAT_ID }}
+        run: python fragman_bot.py
+
+      - name: Persist seen_fragman.json and channel_ids.json
+        run: |
+          git config user.name "fragman-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add seen_fragman.json channel_ids.json
+          git diff --quiet --cached || git commit -m "update fragman bot state [skip ci]"
+          git push
